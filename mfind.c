@@ -1,99 +1,130 @@
+/* <mfind>.c
+ *  <Jenny> <Kinert>
+ *  Laboration 4 <mfind> <5DV088> <HT17>
+ *  <A search program similar to the command find>
+ *  <The user enters filetype, number of threads to be created, files to search>
+ *  <and the name to search for>
+ */
 #include "mfind.h"
-//#define numberOfThreads1 910
-list *ls=NULL;
-int threadCounter = 0; //TODO räkna antalet trådar som väntar om man är sista tråden döda alla gör det med condition variabeln.
+list *ls = NULL;
+int threadCounter = 0;
+programInput *pi;
 pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t mut = PTHREAD_MUTEX_INITIALIZER;
 
-//TODO ta reda på om varje tråd kan ha en egen struct som den använder.
 int main(int argc,char** argv){
-    programInput pi;
+    programInput *pi;
     ls = newEmptyLinkedList();
     pi = extractProgramInput(argc,argv);
-    addDirectoriesToList(argv,argc,pi.numberOfDirectories);
-    createThreads(pi.numberOfThreads);
+    pi->name = argv[argc-1];
+    addDirectoriesToList(argv,argc,pi->numberOfDirectories);
+    createThreads(pi);
     return 0;
 }
 
-void createThreads(int numberOfThreads){
-    pthread_t threads[numberOfThreads];
-    for (long i = 0; i < numberOfThreads-1; ++i) {
+/**
+ * Name: CreateThreads
+ * Description: Creates number of threads indicated from the user.
+ * @param pi
+ */
+void createThreads(programInput *pi){
+    pthread_t threads[pi->numberOfThreads];
+    for (long i = 0; i < pi->numberOfThreads-1; ++i) {
         int rc = pthread_create(&threads[i], NULL, threadMain,(void *)i);
         if (rc){
-            fprintf(stderr,"ERROR; return code from pthread_create() is %d\n", rc);
+            fprintf(stderr,"ERROR; return code from pthread_create() is %d\n",
+                    rc);
             exit(-1);
         }
     }
-    void *temp = (void *)numberOfThreads-1;
+    long temp2 = pi->numberOfThreads-1;
+    void *temp = (void *)temp2;
     threadMain(temp);
 
-    for (long j = 0; j < numberOfThreads-1 ; ++j) {
+    for (long j = 0; j < pi->numberOfThreads-1 ; ++j) {
         if(pthread_join(threads[j], NULL)) {
             fprintf(stderr, "Error joining thread\n");
             exit(1);
         }
     }
 }
-
+/**
+ * Name: threadMain
+ * Description: This is the thread part of the program. CreateThreds redirects
+ * to this function.
+ * @param threadid
+ * @return
+ */
 void *threadMain(void *threadid) {
+    long thread = (long)threadid;
+    int directoryCounter=0;
     struct dirent *pDirent;
     DIR *searchDir;
-    pthread_mutex_lock(&mut);
-    //while(threadCounter != )
-    if(isEmpty(ls)){
-        pthread_cond_wait(&cond,&mut);
-
-        //TODO gör någonting här, använda wait men den tar in en mutex också vilket jag inte har i den här filen
-    }
-    else{
-        node *firstNode = getFirstNode(ls);
-        char *searchFile = (char *)firstNode->data;
-
-        if((searchDir = opendir(searchFile))== NULL){
-            perror("opendir: ");
-            exit(1);
-        }
-
-        while ((pDirent = readdir(searchDir)) != NULL) {
-            if(strcmp(pDirent->d_name,searchFile) == 0){
-                printf("%s\n",pDirent->d_name);
+    while(threadCounter != pi->numberOfThreads){
+        pthread_mutex_lock(&mut);
+        if(isEmpty(ls)){
+            threadCounter++;
+            if(threadCounter == pi->numberOfThreads){
+                pthread_cond_broadcast(&cond);
+                pthread_mutex_unlock(&mut);
+                break;
             }
-
-
-            char *newDirectory = getNewDirectory(pDirent->d_name,searchFile);
-            if(controlIfDirectory(newDirectory) && controlIfValidDirectory(pDirent->d_name)){
-                node *newNode= calloc(sizeof(node),1);
-                newNode->data = newDirectory;
-                addValue(ls,newNode);
-                printf("Add Directory to List %s\n",pDirent->d_name);
+            pthread_cond_wait(&cond,&mut);
+            threadCounter--;
+            pthread_mutex_unlock(&mut);
+        }
+        else{
+            node *firstNode = getFirstNode(ls);
+            pthread_mutex_unlock(&mut);
+            char *searchFile = (char *)firstNode->data;
+            if((searchDir = opendir(searchFile))== NULL){
+                perror(searchFile);
+                pthread_mutex_unlock(&mut);
             }
             else{
-                printf("No directory did not add to List %s\n",pDirent->d_name);
+                directoryCounter++;
+                while ((pDirent = readdir(searchDir)) != NULL) {
+                    char *newDirectory = getNewDirectory(pDirent->d_name,searchFile);
+                    controlIfCorrectSearchname(pDirent->d_name,newDirectory);
+                    if(controlIfDirectory(newDirectory) &&
+                       controlIfValidDirectory(pDirent->d_name)){
+                        node *newNode= calloc(sizeof(node),1);
+                        newNode->data = newDirectory;
+                        pthread_mutex_lock(&mut);
+                        addValue(ls,newNode);
+                        pthread_cond_signal(&cond);
+                        pthread_mutex_unlock(&mut);
+                    }
+                }
             }
-            printf ("content in pDirent: [%s]\n", pDirent->d_name);
-
+            closedir (searchDir);
         }
-        closedir (searchDir);
     }
-    for (int i = 0; i <ls->size ; ++i) {
-        node *printNode = getNodeFromIndex(ls,i);
-        fprintf(stderr,"%s\n",(char*)printNode->data);
-    }
+    fprintf(stderr,"Thread: %ld Reads: %d\n",thread,directoryCounter);
     return 0;
 }
+
+/**
+ * Name: getNewDirectory
+ * Description: Takes input in form of the name of directory thats entered and
+ * the startdirectory from which the program is based. They are then putted
+ * togheter and returned so the whole path to the directory can be saved.
+ * @param directoryName
+ * @param startDirectory
+ * @return
+ */
 char *getNewDirectory(char directoryName[], char *startDirectory){
     int lengthOfBuff = 0;
-
     lengthOfBuff = strlen(directoryName);
     lengthOfBuff += strlen(startDirectory);
     char *newDirectory= calloc(sizeof(char),(lengthOfBuff+2));
-
     strncpy(newDirectory,startDirectory,strlen(startDirectory));
     strncat(newDirectory,"/",1);
     strncat(newDirectory, directoryName,strlen(directoryName));
     strncat(newDirectory,"\0",1);
     return newDirectory;
 }
+
 /**
  * Name: controlIfDirectory
  * Description: Controls if an item found in a directory is a new directory.
@@ -128,11 +159,19 @@ bool controlIfValidDirectory(char *newDirectory){
     }
     return true;
 }
-programInput extractProgramInput(int argc, char** argv){
-    programInput pi;
+
+/**
+ * Name: extractProgramInput
+ * Description: Controls what preferences the user has given to the program.
+ * Filetype and number of threads is saved in a struct for later access.
+ * @param argc
+ * @param argv
+ * @return
+ */
+programInput *extractProgramInput(int argc, char** argv){
+    pi = calloc(sizeof(programInput),1);
     char option =0;
     extern int optind;
-    //node *newNode;
     int numberOfThreads = 0;
     extern char *optarg;
     while ((option = getopt(argc,argv,"t:p:")) !=-1){
@@ -140,30 +179,31 @@ programInput extractProgramInput(int argc, char** argv){
             case('t') :
                 if(strcmp(optarg,"d")==0 || strcmp(optarg,"l") == 0 ||
                         strcmp(optarg,"f") == 0){
-                    pi.filetype = optarg;
-                    printf("filetype: %s\n",pi.filetype);
+                    pi->filetype = optarg;
                 }
                 else{
-                    fprintf(stderr,"Error: Invalid type");
+                    fprintf(stderr,"Error: Invalid type\n");
                     exit(1);
                 }
                 break;
             case('p') :
                 if(isdigit(*optarg)){
                     numberOfThreads=atoi(optarg);
-                    pi.numberOfThreads = numberOfThreads;
-                    printf("number of threads: %d\n",numberOfThreads);
+                    pi->numberOfThreads = numberOfThreads;
                    break;
                 }
                 else{
-                    fprintf(stderr,"Error: number of threads is not a number");
+                    fprintf(stderr,"Error: number of threads is not a number\n");
                     exit(1);
                 }
             default: printf("something went wrong\n");
                 exit(EXIT_FAILURE);
         }
     }
-    pi.numberOfDirectories = optind;
+    if(numberOfThreads == 0){
+        pi->numberOfThreads = 1;
+    }
+    pi->numberOfDirectories = optind;
     return pi;
 }
 
@@ -175,14 +215,55 @@ programInput extractProgramInput(int argc, char** argv){
  * @param index
  */
 void addDirectoriesToList(char **argv, int argc, int index){
-    int numberOfDirectories = argc - index;
+    int numberOfDirectories = argc - index - 1;
+    if(numberOfDirectories == 0){
+        fprintf(stderr, "No directories where added as startFile \n");
+        exit(1);
+    }
     for (int i = 0; i < numberOfDirectories; ++i) {
+        if(controlIfDirectory(argv[index+i])){
+            if(controlIfValidDirectory(argv[index +i])){
+                controlIfCorrectSearchname(argv[index +i],argv[index +i]);
+            }
+        }
         node *newNode = calloc(sizeof(node),1);
-        newNode->data = argv[index];
+        newNode->data = argv[index+i];
         addValue(ls, newNode);
     }
 }
 
+/**
+ * Name: controlIfCorrectSearchname
+ * Description: Controls if the item searched is the same as the user indicated
+ * in the beginning and if the filetype is correct.
+ * @param filename
+ * @param newDirectory
+ */
+void controlIfCorrectSearchname(char *filename, char *newDirectory){
+    struct stat fileStat;
+    char *baseName = NULL;
+    baseName = basename(filename);
+    if(strcmp(baseName,pi->name)==0){
+        if(pi->filetype != NULL){
+            if(lstat(newDirectory,&fileStat)==-1){
+                perror("lstat: ");
+                exit(1);
+            } else if(S_ISREG(fileStat.st_mode)!=0 &&
+                    strcmp(pi->filetype,"f")==0){
+                printf("%s\n",newDirectory);
+            } else if(S_ISLNK(fileStat.st_mode)!=0 &&
+                    strcmp(pi->filetype,"l")==0){
+                printf("%s\n",newDirectory);
+            }else if(S_ISDIR(fileStat.st_mode)!=0 &&
+                    strcmp(pi->filetype,"d")==0){
+                printf("%s\n",newDirectory);
+            }
+        }
+        else{
+            printf("%s\n",newDirectory);
+        }
+    }
+}
 
 
 /**
@@ -190,12 +271,12 @@ void addDirectoriesToList(char **argv, int argc, int index){
  * Description: frees the memory of the lists allocated items
  * @param ls: list to be freed
  */
-void freeListItems(list *ls){
-    while(ls->next!=NULL){
-        node *freenode = ls->next;
+void freeListItems(list *list1){
+    while(list1->next!=NULL){
+        node *freenode = list1->next;
         node *tempNode = freenode->next;
         free(freenode->data);
         free(freenode);
-        ls->next = tempNode;
+        list1->next = tempNode;
     }
 }

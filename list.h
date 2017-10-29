@@ -1,7 +1,8 @@
-//
-// Created by Jenny on 2017-07-27.
-//
-
+/* <list>.h
+ *  <Jenny> <Kinert>
+ *  Laboration 4 <mfind> <5DV088> <HT17>
+ *  <A simple linked list >
+ */
 #ifndef LINKEDLIST_LIST_H
 #define LINKEDLIST_LIST_H
 #include <stdio.h>
@@ -16,10 +17,14 @@
  * @param size (the number of elements in the list)
  * @parm next (pointer to an element in this list)
  */
-typedef struct node{void *data; struct node *next;} node;
-typedef bool c(node *data1 , node *data2);
 typedef struct head{ unsigned int size; void* next;} list;
 
+/**
+ * Name: node
+ * Description: The node holds the data items in the list and points to the
+ * next node in the list.
+ */
+typedef struct node{void *data; struct node *next;} node;
 
 /**
  * Function: newEmptyLinkedList
@@ -91,6 +96,13 @@ void sortList(list *list);
 */
 void listSystemCheck(void *memory);
 
+/**
+ * Name: getFirstNode
+ * Description: Returns the first node of the list and after deleting it from
+ * the list.
+ * @param list
+ * @return
+ */
 node *getFirstNode(list *list);
 
 

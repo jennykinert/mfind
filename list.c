@@ -1,6 +1,8 @@
-//
-// Created by Jenny on 2017-07-27.
-//
+/* <list>.c
+ *  <Jenny> <Kinert>
+ *  Laboration 4 <mfind> <5DV088> <HT17>
+ *  <A simple linked list >
+ */
 #include "list.h"
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 /**
@@ -63,7 +65,9 @@ void removeNodeFromList(node *removeNode,list *ls){
 }
 
 /**
- *
+ * Name: getFirstNode
+ * Description: Returns the first node of the list and after deleting it from
+ * the list.
  * @param list
  * @return
  */
@@ -88,7 +92,6 @@ bool isEmpty(list *list){
         return true;
     }
     else{
-
         pthread_mutex_unlock(&mutex);
         return false;
     }
@@ -106,18 +109,6 @@ int sizeOfList(list *list){
     pthread_mutex_unlock(&mutex);
     return size;
 }
-
-/**
- * Name: swap
- * Description: Function to help swapping elements when sorting the list with
- * bubblesort
- * @param list
- */
-/**void swap(node *element1, node *element2){
-    node *temp = element1;
-    element1->next = element2->next;
-    element2->next=temp;
-}**/
 
 /**
  * Name: getNodeFromIndex
@@ -141,27 +132,6 @@ node *getNodeFromIndex(list *list, int index){
     pthread_mutex_unlock(&mutex);
     return node;
 }
-
-/**
- * Name: sortList
- * Description: Sorts the list according to the algorithm bubblesort
- * @param list
- */
-/**void sortList(list *list){
-    node *first= list->next;
-
-    while(first != NULL ){
-        node *second = first->next;
-        while(second != NULL){
-            bool control = list->compare(first,second);
-            if(control){
-                swap(first, second);
-            }
-            second = second->next;
-        }
-        first=first->next;
-    }
-}**/
 
 /**
  * This function is only part of the implementation
