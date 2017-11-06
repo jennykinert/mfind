@@ -19,6 +19,9 @@ int main(int argc,char** argv){
     pi->name = argv[argc-1];
     addDirectoriesToList(argv,argc,pi->numberOfDirectories);
     createThreads(pi);
+    //freeListItems(ls);
+    free(pi);
+    free(ls);
     return 0;
 }
 
@@ -59,6 +62,7 @@ void *threadMain(void *threadid) {
     long thread = (long)threadid;
     int directoryCounter=0;
     struct dirent *pDirent;
+    node *firstNode;
     DIR *searchDir;
     while(threadCounter != pi->numberOfThreads){
         pthread_mutex_lock(&mut);
@@ -74,7 +78,7 @@ void *threadMain(void *threadid) {
             pthread_mutex_unlock(&mut);
         }
         else{
-            node *firstNode = getFirstNode(ls);
+            firstNode = getFirstNode(ls);
             pthread_mutex_unlock(&mut);
             char *searchFile = (char *)firstNode->data;
             if((searchDir = opendir(searchFile))== NULL){
@@ -97,7 +101,9 @@ void *threadMain(void *threadid) {
                     }
                 }
             }
-            closedir (searchDir);
+            closedir(searchDir);
+            free(firstNode->data);
+            free(firstNode);
         }
     }
     fprintf(stderr,"Thread: %ld Reads: %d\n",thread,directoryCounter);

@@ -39,11 +39,11 @@ void addValue(list *list, node *node){
  * @param list
  */
 void removeNodeFromList(node *removeNode,list *ls){
-    node *secondNode = malloc(sizeof(node));
-    node *firstNode = malloc(sizeof(node));
+    node *secondNode = NULL;
+    node *firstNode = NULL;
     bool deletedNode = false;
     firstNode = ls->next;
-    secondNode->data = NULL;
+    //secondNode->data = NULL;
     while(firstNode != NULL){
         if(firstNode == removeNode){
             secondNode->next = firstNode->next;
@@ -62,6 +62,8 @@ void removeNodeFromList(node *removeNode,list *ls){
     if(!deletedNode){
         fprintf(stderr, "Node do not exist in list\n");
     }
+    //free(secondNode);
+    //free(firstNode);
 }
 
 /**
