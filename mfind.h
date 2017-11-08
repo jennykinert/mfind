@@ -94,8 +94,8 @@ void addDirectoriesToList(char **argv, int argc, int index);
 void controlIfCorrectSearchname(char *filename, char *newDirectory);
 
 /**
- * Name: freeListItems
- * Description: frees the memory of the lists allocated items
- * @param ls: list to be freed
+ * Name controlMemoryAllocated
+ * Description controls if function systemcalls was allocated correctly
+ * @param str
  */
-void freeListItems(list *ls);
+static void controlMemoryAllocated(node *n);

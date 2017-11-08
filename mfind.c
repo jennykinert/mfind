@@ -19,7 +19,6 @@ int main(int argc,char** argv){
     pi->name = argv[argc-1];
     addDirectoriesToList(argv,argc,pi->numberOfDirectories);
     createThreads(pi);
-    //freeListItems(ls);
     free(pi);
     free(ls);
     return 0;
@@ -80,10 +79,9 @@ void *threadMain(void *threadid) {
         else{
             firstNode = getFirstNode(ls);
             pthread_mutex_unlock(&mut);
-            char *searchFile = (char *)firstNode->data;
+            char *searchFile = firstNode->data;
             if((searchDir = opendir(searchFile))== NULL){
                 perror(searchFile);
-                pthread_mutex_unlock(&mut);
             }
             else{
                 directoryCounter++;
@@ -92,12 +90,17 @@ void *threadMain(void *threadid) {
                     controlIfCorrectSearchname(pDirent->d_name,newDirectory);
                     if(controlIfDirectory(newDirectory) &&
                        controlIfValidDirectory(pDirent->d_name)){
-                        node *newNode= calloc(sizeof(node),1);
+                        node *newNode= calloc(1,sizeof(node));
+                        controlMemoryAllocated(newNode);
+
                         newNode->data = newDirectory;
                         pthread_mutex_lock(&mut);
                         addValue(ls,newNode);
                         pthread_cond_signal(&cond);
                         pthread_mutex_unlock(&mut);
+                    }
+                    else{
+                        free(newDirectory);
                     }
                 }
             }
@@ -123,7 +126,11 @@ char *getNewDirectory(char directoryName[], char *startDirectory){
     int lengthOfBuff = 0;
     lengthOfBuff = strlen(directoryName);
     lengthOfBuff += strlen(startDirectory);
-    char *newDirectory= calloc(sizeof(char),(lengthOfBuff+2));
+    char *newDirectory = calloc(sizeof(char),(lengthOfBuff+2));
+    if(newDirectory == NULL){
+        fprintf(stderr, "ERROR: %s\n", newDirectory);
+        exit(1);
+    }
     strncpy(newDirectory,startDirectory,strlen(startDirectory));
     strncat(newDirectory,"/",1);
     strncat(newDirectory, directoryName,strlen(directoryName));
@@ -176,6 +183,10 @@ bool controlIfValidDirectory(char *newDirectory){
  */
 programInput *extractProgramInput(int argc, char** argv){
     pi = calloc(sizeof(programInput),1);
+    if(pi == NULL){
+        fprintf(stderr, "ERROR: Could not allocate programInput struct");
+        exit(1);
+    }
     char option =0;
     extern int optind;
     int numberOfThreads = 0;
@@ -233,7 +244,11 @@ void addDirectoriesToList(char **argv, int argc, int index){
             }
         }
         node *newNode = calloc(sizeof(node),1);
-        newNode->data = argv[index+i];
+        controlMemoryAllocated(newNode);
+        if((newNode->data = strdup(argv[index+i]))==NULL){
+            perror("strdup");
+            exit(1);
+        }
         addValue(ls, newNode);
     }
 }
@@ -270,19 +285,14 @@ void controlIfCorrectSearchname(char *filename, char *newDirectory){
         }
     }
 }
-
-
 /**
- * Name: freeListItems
- * Description: frees the memory of the lists allocated items
- * @param ls: list to be freed
+ * Name controlMemoryAllocated
+ * Description controls if function systemcalls was allocated correctly
+ * @param str
  */
-void freeListItems(list *list1){
-    while(list1->next!=NULL){
-        node *freenode = list1->next;
-        node *tempNode = freenode->next;
-        free(freenode->data);
-        free(freenode);
-        list1->next = tempNode;
+static void controlMemoryAllocated(node *n) {
+    if(n == NULL){
+        fprintf(stderr, "ERROR: node was not allocated\n");
+        exit(EXIT_FAILURE);
     }
 }

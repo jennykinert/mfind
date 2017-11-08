@@ -43,7 +43,7 @@ void removeNodeFromList(node *removeNode,list *ls){
     node *firstNode = NULL;
     bool deletedNode = false;
     firstNode = ls->next;
-    //secondNode->data = NULL;
+    secondNode = ls->next;
     while(firstNode != NULL){
         if(firstNode == removeNode){
             secondNode->next = firstNode->next;
@@ -51,7 +51,6 @@ void removeNodeFromList(node *removeNode,list *ls){
                 ls->next = firstNode->next;
             }
             firstNode=NULL;
-            free(firstNode);
             ls->size--;
             deletedNode = true;
             break;
@@ -62,8 +61,6 @@ void removeNodeFromList(node *removeNode,list *ls){
     if(!deletedNode){
         fprintf(stderr, "Node do not exist in list\n");
     }
-    //free(secondNode);
-    //free(firstNode);
 }
 
 /**
